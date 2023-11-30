@@ -42,6 +42,9 @@ int main(void) {
     SetShaderValue(zoomer.shader, zoomer.screenSize, &screen_size,
                    SHADER_UNIFORM_VEC2);
 
+    texture.width = screen_size.x;
+    texture.height = screen_size.y;
+
     while (!WindowShouldClose()) {
         int screenWidth = GetRenderWidth();
         int screenHeight = GetRenderHeight();
