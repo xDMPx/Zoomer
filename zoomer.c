@@ -1,10 +1,13 @@
 #include "raylib.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 #define TARGET_FPS 120
 #define MAX_ZOOM 7.0f
 #define MIN_ZOOM 1.0f
 #define SCROLL_SMOTHING_FACTOR 0.10f
+#define ZOOMER_SCREENSHOT_CMD_ENV "ZOOMER_SCREENSHOT_CMD"
+#define SCREENSHOT_FILE_NAME "temp_screenshoot.png"
 
 typedef struct Zoomer {
     Shader shader;
@@ -24,13 +27,39 @@ Zoomer load_zoomer_shader() {
 
 int main(void) {
 
-    InitWindow(0, 0, "Zoomer");
-    ToggleFullscreen();
+    const char* SCREENSHOT_CMD_ENV = getenv(ZOOMER_SCREENSHOT_CMD_ENV);
+    if (SCREENSHOT_CMD_ENV == NULL) {
+        printf("zoomer: Please set %s environment variable\n",
+               ZOOMER_SCREENSHOT_CMD_ENV);
+        return 1;
+    }
 
-    Image img = LoadImage("test.png");
+    int buff_size = 256;
+    char cmd[buff_size];
+    int char_count = snprintf(cmd, buff_size, "%s %s", SCREENSHOT_CMD_ENV,
+                              SCREENSHOT_FILE_NAME);
+    if (char_count < 0 || char_count > buff_size) {
+        printf("zoomer: Error, could not process provided screnshot cmd\n");
+        return 1;
+    }
+
+    printf("INFO: ZOOMER_SCREENSHOT_CMD_ENV: %s\n", cmd);
+    int rc = system(cmd);
+    if (rc != 0) {
+        printf("zoomer: Error %s:%i\n", cmd, rc);
+    }
+
+    Image img = LoadImage(SCREENSHOT_FILE_NAME);
+    if (remove(SCREENSHOT_FILE_NAME) != 0) {
+        printf("zoomer: Unable to delete the file\n");
+        return 1;
+    }
+
+    InitWindow(0, 0, "Zoomer");
     Texture2D texture = LoadTextureFromImage(img);
     UnloadImage(img);
 
+    ToggleFullscreen();
     SetTargetFPS(TARGET_FPS);
 
     Camera2D camera = {0};
