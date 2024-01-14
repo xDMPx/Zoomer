@@ -8,19 +8,22 @@
 #define SCROLL_SMOTHING_FACTOR 0.10f
 #define ZOOMER_SCREENSHOT_CMD_ENV "ZOOMER_SCREENSHOT_CMD"
 #define SCREENSHOT_FILE_NAME "temp_screenshoot.png"
+#define CIRCLE_SHADER_KEY KEY_C
 
 typedef struct Zoomer {
     Shader shader;
     int mousePos;
     int screenSize;
+    bool enabled;
 } Zoomer;
 
 Zoomer load_zoomer_shader() {
     Shader shader = LoadShader(0, "zoomer.fs");
     int mousePos = GetShaderLocation(shader, "mousePos");
     int screenSize = GetShaderLocation(shader, "screenSize");
+    bool enabled = false;
 
-    Zoomer zoomer = {shader, mousePos, screenSize};
+    Zoomer zoomer = {shader, mousePos, screenSize, enabled};
 
     return zoomer;
 }
@@ -75,6 +78,11 @@ int main(void) {
     texture.height = screen_size.y;
 
     while (!WindowShouldClose()) {
+
+        if (IsKeyPressed(KEY_C)) {
+            zoomer.enabled = !zoomer.enabled;
+        }
+
         int screenWidth = GetRenderWidth();
         int screenHeight = GetRenderHeight();
 
@@ -89,8 +97,10 @@ int main(void) {
 
         // Shader reloading
         if (IsKeyPressed(KEY_R)) {
+            bool enabled = zoomer.enabled;
             UnloadShader(zoomer.shader);
             zoomer = load_zoomer_shader();
+            zoomer.enabled = enabled;
             SetShaderValue(zoomer.shader, zoomer.screenSize, &screen_size,
                            SHADER_UNIFORM_VEC2);
         }
@@ -113,9 +123,13 @@ int main(void) {
 
             ClearBackground(WHITE);
             BeginMode2D(camera);
-            BeginShaderMode(zoomer.shader);
-            { DrawTexture(texture, 0, 0, WHITE); }
-            EndShaderMode();
+            if (zoomer.enabled) {
+                BeginShaderMode(zoomer.shader);
+                { DrawTexture(texture, 0, 0, WHITE); }
+                EndShaderMode();
+            } else {
+                { DrawTexture(texture, 0, 0, WHITE); }
+            }
             EndMode2D();
 
             DrawFPS(0, 0);
