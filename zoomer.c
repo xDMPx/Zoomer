@@ -14,6 +14,7 @@ typedef struct Zoomer {
     Shader shader;
     int mousePos;
     int screenSize;
+    int circleSizeModifier;
     bool enabled;
 } Zoomer;
 
@@ -21,9 +22,10 @@ Zoomer load_zoomer_shader() {
     Shader shader = LoadShader(0, "zoomer.fs");
     int mousePos = GetShaderLocation(shader, "mousePos");
     int screenSize = GetShaderLocation(shader, "screenSize");
-    bool enabled = false;
+    int circleSizeModifier = GetShaderLocation(shader, "circleSizeModifier");
+    bool enabled = true;
 
-    Zoomer zoomer = {shader, mousePos, screenSize, enabled};
+    Zoomer zoomer = {shader, mousePos, screenSize, circleSizeModifier, enabled};
 
     return zoomer;
 }
@@ -71,15 +73,19 @@ int main(void) {
     Vector2 screen_size = {GetRenderWidth(), GetRenderHeight()};
 
     Zoomer zoomer = load_zoomer_shader();
+    bool modify_circle_size = false;
+    float circle_size_modifier = 1.0f;
     SetShaderValue(zoomer.shader, zoomer.screenSize, &screen_size,
                    SHADER_UNIFORM_VEC2);
+    SetShaderValue(zoomer.shader, zoomer.circleSizeModifier,
+                   &circle_size_modifier, SHADER_UNIFORM_FLOAT);
 
     texture.width = screen_size.x;
     texture.height = screen_size.y;
 
     while (!WindowShouldClose()) {
 
-        if (IsKeyPressed(KEY_C)) {
+        if (IsKeyPressed(CIRCLE_SHADER_KEY)) {
             zoomer.enabled = !zoomer.enabled;
         }
 
@@ -103,13 +109,32 @@ int main(void) {
             zoomer.enabled = enabled;
             SetShaderValue(zoomer.shader, zoomer.screenSize, &screen_size,
                            SHADER_UNIFORM_VEC2);
+            SetShaderValue(zoomer.shader, zoomer.circleSizeModifier,
+                           &circle_size_modifier, SHADER_UNIFORM_FLOAT);
         }
 
-        camera.zoom += ((float)GetMouseWheelMove() * SCROLL_SMOTHING_FACTOR);
-        if (camera.zoom > MAX_ZOOM)
-            camera.zoom = MAX_ZOOM;
-        else if (camera.zoom < MIN_ZOOM)
-            camera.zoom = MIN_ZOOM;
+        if (IsKeyPressed(KEY_LEFT_SHIFT) || IsKeyPressed(KEY_RIGHT_SHIFT)) {
+            modify_circle_size = true;
+        } else if (IsKeyReleased(KEY_LEFT_SHIFT) ||
+                   IsKeyReleased(KEY_RIGHT_SHIFT)) {
+            modify_circle_size = false;
+        }
+
+        if (modify_circle_size) {
+            circle_size_modifier +=
+                ((float)GetMouseWheelMove() * SCROLL_SMOTHING_FACTOR);
+            if (circle_size_modifier > 2.0f)
+                circle_size_modifier = 2.0f;
+            else if (circle_size_modifier < 0.2f)
+                circle_size_modifier = 0.2f;
+        } else {
+            camera.zoom +=
+                ((float)GetMouseWheelMove() * SCROLL_SMOTHING_FACTOR);
+            if (camera.zoom > MAX_ZOOM)
+                camera.zoom = MAX_ZOOM;
+            else if (camera.zoom < MIN_ZOOM)
+                camera.zoom = MIN_ZOOM;
+        }
 
         Vector2 mouse_pos = {(float)GetMouseX(), (float)GetMouseY()};
         camera.target = (Vector2){mouse_pos.x, mouse_pos.y};
@@ -117,10 +142,11 @@ int main(void) {
 
         SetShaderValue(zoomer.shader, zoomer.mousePos, &mouse_pos,
                        SHADER_UNIFORM_VEC2);
+        SetShaderValue(zoomer.shader, zoomer.circleSizeModifier,
+                       &circle_size_modifier, SHADER_UNIFORM_FLOAT);
 
         BeginDrawing();
         {
-
             ClearBackground(WHITE);
             BeginMode2D(camera);
             if (zoomer.enabled) {

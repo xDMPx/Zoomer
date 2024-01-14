@@ -8,6 +8,7 @@ out vec4 finalColor;
 uniform sampler2D texture0;
 uniform vec2 mousePos;
 uniform vec2 screenSize;
+uniform float circleSizeModifier;
 
 
 vec3 rgbToHsv(vec3 rgb);
@@ -19,7 +20,7 @@ void main(){
     vec2 mousePos = vec2(mousePos.x,mousePos.y);
     vec2 scaledCoord = vec2(fragTexCoord.x * screenSize.x, fragTexCoord.y * screenSize.y);
 
-    float r = screenSize.x*0.1;
+    float r = screenSize.x*0.1*circleSizeModifier;
     float x = scaledCoord.x - mousePos.x;
     float y = scaledCoord.y - mousePos.y;
 
